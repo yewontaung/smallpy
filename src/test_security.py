@@ -1,4 +1,5 @@
 
+from contextlib import contextmanager
 from typing import Any
 
 from _dev.managers.security import DefaultSecurityManager, SecurityContext, SecurityUser
@@ -22,20 +23,23 @@ db:dict[int, dict[str, Any]] = {
     },
 }
 
+@contextmanager
 def login(accid:int):
     acc = db.get(accid)
-    if acc:SecurityContext.setuser(SecurityUser(
-        userid=str(acc), username=acc.get("name"), roles=["member"]
-    ))
+    if acc:
+        with SecurityContext.user(SecurityUser(
+            userid=str(acc), username=acc.get("name"), roles=["member"]
+        )):
+            yield
+
 
 sec = DefaultSecurityManager()
 
-login(1)
-
-@sec.hasroles(["member"])
+@sec.authenticated
 def profile(accid:int):
     return db.get(accid)
 
-p = profile(1)
+with login(1):
+    p = profile(1)
 
-print(p)
+    print(p)
